@@ -1,9 +1,12 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm run install:all",
-  "buildCommand": "npm run build",
-  "outputDirectory": "client/dist",
+  "$schema": "https://vercel.sh",
   "services": {
+    "web": {
+      "root": "client",
+      "installCommand": "npm run install:all",
+      "buildCommand": "npm run build",
+      "outputDirectory": "dist"
+    },
     "api": {
       "root": "server",
       "entrypoint": "app.js",
@@ -16,6 +19,6 @@
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "api" } },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": { "service": "web" } }
   ]
 }
