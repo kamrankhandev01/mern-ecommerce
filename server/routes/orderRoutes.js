@@ -13,11 +13,15 @@ import {
   updateAdminOrder,
 } from "../controllers/orderControllers.js";
 import { getAnalyticsReport } from "../controllers/analyticsControllers.js";
+import { releaseExpiredOrders } from "../controllers/cronControllers.js";
 
 const orderRouter = express.Router();
 
 orderRouter.get("/payment-options", getPaymentOptions);
 orderRouter.post("/webhooks/safepay", handleSafepayWebhook);
+// Called by Vercel Cron (see `crons` in vercel.json) in place of the in-process
+// sweeper. Authenticated by CRON_SECRET rather than a user session.
+orderRouter.post("/cron/release-expired", releaseExpiredOrders);
 orderRouter.post("/", createOrderLimiter, isAuthenticated, createOrder);
 orderRouter.get("/mine", isAuthenticated, getMyOrders);
 orderRouter.get("/admin/stats", isAuthenticated, isAdmin, getAdminOrderStats);

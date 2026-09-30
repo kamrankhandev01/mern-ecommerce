@@ -1,7 +1,22 @@
 import axios from "axios";
 
+/**
+ * Where the API lives.
+ *
+ * `VITE_API_URL` is only needed when the client and the API are served from
+ * different origins. Left empty in a production build the requests stay
+ * relative to the current origin — which is what the Vercel deployment does, by
+ * serving the SPA and the API from one project behind one domain. In
+ * development we fall back to the local API port so `npm run dev` just works.
+ */
+const apiBaseURL = (() => {
+  const configured = import.meta.env.VITE_API_URL?.trim();
+  if (configured) return configured;
+  return import.meta.env.DEV ? "http://localhost:3000" : "";
+})();
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
+  baseURL: apiBaseURL,
   withCredentials: true,
   timeout: 15000,
 });

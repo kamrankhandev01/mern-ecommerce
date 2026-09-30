@@ -99,6 +99,67 @@ npm run smoke
 It exercises registration, the cart API, checkout, both payment providers and
 the admin endpoints against a running server, and deletes everything it creates.
 
+## Deploying to Vercel
+
+One Vercel project serves both halves of the store on a single domain, so the
+browser only ever talks to its own origin and the `httpOnly` session cookie
+works without any cross-site exception. `vercel.json` at the repo root wires it
+up:
+
+| Setting         | Value                                                                       |
+| --------------- | --------------------------------------------------------------------------- |
+| `installCommand` | `npm run install:all` — installs the `client` and `server` workspaces        |
+| `buildCommand`   | `npm run build` — produces `client/dist`                                     |
+| `outputDirectory`| `client/dist`                                                                |
+| `services.api`   | the API, rooted at `server/` with `app.js` as its entrypoint                 |
+| `rewrites`       | `/api/*` → the API service, everything else → `index.html` (client routing)  |
+| `crons`          | releases stock held by abandoned checkouts                                   |
+
+Two pieces make the same Express app safe to run as a serverless function:
+
+- `server/app.js` builds the app and never calls `app.listen()` or starts a
+  timer. `server/server.js` is the long-running entry point and keeps both.
+- The Mongo connection opens on the first request that needs it rather than at
+  boot, and is reused while the instance stays warm. `GET /api/health` is
+  answered *before* the database so an outage is reported rather than caused.
+
+Connect the repository in the Vercel dashboard, keeping the **root directory**
+as the repository root (so this `vercel.json` is picked up), then set the
+variables from `server/.env.example` under **Settings → Environment
+Variables**:
+
+- `MONGO_URI`, and a `JWT_SECRET` of 24+ characters.
+- `CLIENT_URL` — the deployed origin, e.g. `https://astra.example.com`. It is
+  required in production and drives both CORS and the payment return URL.
+- `TRUST_PROXY=true`. Already the default when `NODE_ENV=production`, but set
+  it explicitly so rate limiting sees the real client IP behind Vercel's proxy.
+- `CRON_SECRET` — a random string. Vercel Cron sends it as a bearer token to
+  `POST /api/orders/cron/release-expired`, which replaces the in-process
+  five-minute sweeper. Without it that route returns 503 and stock held by
+  abandoned checkouts is never released. (On the Hobby plan cron runs once a
+  day; upgrade for the every-15-minutes schedule in `vercel.json`.)
+- Optional: `SMTP_*`, `CLOUDINARY_*`, `STRIPE_*`, `SAFEPAY_*`.
+
+Do **not** set `VITE_API_URL` — leaving it empty is what makes the client send
+same-origin requests. Point the Stripe and Safepay webhooks at
+`https://<your-domain>/api/orders/webhooks/stripe` and `.../safepay`.
+
+A few things to know about this shape of deployment:
+
+- Rate limiting is in-memory, so limits reset whenever an instance is recycled
+  and are per-region. Keep the limiters, but do not rely on them for abuse
+  control.
+- Functions are stateless. Uploads already go straight to Cloudinary, so
+  nothing depends on a local filesystem.
+- The default function timeout is raised to 60s; lower `maxDuration` in
+  `vercel.json` if you would rather fail fast.
+
+Deploying the two halves to **separate** projects also works and needs no code
+change: point each project's root directory at `client/` or `server/`, set
+`VITE_API_URL` to the API's domain, and list the client's domain in
+`CLIENT_URL`. Cookies then rely on `SameSite=None; Secure`, which the app
+already sets automatically in production.
+
 ## Production notes
 
 - Set `NODE_ENV=production`, `CLIENT_URL` to your real origin(s) and
