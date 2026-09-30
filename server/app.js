@@ -44,17 +44,11 @@ export const createApp = () => {
   app.use(securityHeaders);
   app.use(
     cors({
-      origin: (origin, callback) => {
-        // Same-origin and server-to-server requests send no Origin header.
-        if (!origin) return callback(null, true);
-        const allowed = env.clientOrigins;
-        if (allowed.length === 0 || allowed.includes(origin.replace(/\/+$/, ""))) {
-          return callback(null, true);
-        }
-        return callback(
-          new ApiError(403, `Origin ${origin} is not allowed by CORS.`),
-        );
-      },
+      origin: [
+        "https://astra-one-phi.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000"
+      ],
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       maxAge: 86400,
