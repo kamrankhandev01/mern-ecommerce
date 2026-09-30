@@ -17,11 +17,5 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "api" } },
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "crons": [
-    {
-      "path": "/api/orders/cron/release-expired",
-      "schedule": "*/15 * * * *"
-    }
   ]
 }
