@@ -3,7 +3,6 @@
   "services": {
     "web": {
       "root": "client",
-      "installCommand": "npm run install:all",
       "buildCommand": "npm run build",
       "outputDirectory": "dist"
     },
